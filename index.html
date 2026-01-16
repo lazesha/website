@@ -864,7 +864,9 @@
         let allPesananData = [];
         let allReviews = []; // <--- BARU: DATA REVIEW
         let currentSlide = 0;
-        let myCart = JSON.parse(localStorage.getItem('lazesha_cart')) || []; 
+        let myCart = JSON.parse(localStorage.getItem('lazesha_cart')) || [];
+        let currentDetailImages = [];
+        let currentDetailIndex = 0; 
 
         // --- GANTI FUNGSI INITWEBSITE DENGAN YANG INI ---
         async function initWebsite() {
@@ -912,22 +914,24 @@
 
         // --- 2. FITUR DETAIL PRODUK & REVIEW (BARU) ---
 
-        // --- UPDATE: DETAIL PRODUK + RELATED PRODUCTS ---
+        // --- UPDATE: DETAIL PRODUK (SUPPORT SLIDER GAMBAR) ---
         function openDetailModal(id) {
             const product = allProductsData.find(p => p.id === id);
             if(!product) return;
 
-            // 1. ISI DATA UTAMA (Sama seperti sebelumnya)
+            // 1. ISI DATA TEKS
             document.getElementById('detail-name').innerText = product.nama;
             document.getElementById('detail-price').innerText = formatRupiah(product.harga);
             document.getElementById('detail-desc').innerText = product.deskripsi || "Tidak ada deskripsi.";
             
+            // Logika Stok
             const stok = parseInt(product.stok) || 0;
             const stokEl = document.getElementById('detail-stok');
             if(stok <= 0) stokEl.innerHTML = '<span style="color:red; font-weight:bold;">HABIS</span>';
             else if(stok <= 5) stokEl.innerHTML = `<span style="color:red; font-weight:bold;">Sisa tinggal ${stok} pcs!</span>`;
             else stokEl.innerHTML = `<span style="color:green; font-weight:bold;">Stok Tersedia (${stok})</span>`;
 
+            // Tombol Keranjang
             const btnCart = document.getElementById('detail-btn-cart');
             if(stok <= 0) {
                 btnCart.style.background = "#ccc";
@@ -939,38 +943,23 @@
                 btnCart.onclick = function() { addToCart(product.id); closeDetailModal(); };
             }
 
-            // 2. RENDER MEDIA (Sama seperti sebelumnya)
-            const rawLinks = product.gambar ? product.gambar.toString().split(',') : [];
-            const container = document.getElementById('detail-media-container');
-            container.innerHTML = '';
-            
-            if(rawLinks.length > 0) {
-                const link = rawLinks[0].trim();
-                let driveId = "";
-                if (link.includes("/d/")) driveId = link.split('/d/')[1].split('/')[0];
+            // --- 2. LOGIKA BARU: MEDIA SLIDER DI MODAL ---
+            // Ambil semua gambar, simpan di variable global, reset index ke 0
+            currentDetailImages = product.gambar ? product.gambar.toString().split(',') : [];
+            currentDetailIndex = 0;
+            renderDetailMedia(); // Panggil fungsi render gambar
 
-                if(link.toLowerCase().includes('#video')) {
-                     const videoUrl = `https://drive.google.com/file/d/${driveId}/preview`;
-                     container.innerHTML = `<iframe src="${videoUrl}" class="detail-video" allow="autoplay"></iframe>`;
-                } else {
-                     const imgUrl = driveId ? `https://lh3.googleusercontent.com/d/${driveId}` : 'https://via.placeholder.com/400x500';
-                     container.innerHTML = `<img src="${imgUrl}" class="detail-img">`;
-                }
-            }
-
-            // 3. SIAPKAN FORM REVIEW (Sama)
+            // 3. SIAPKAN REVIEW
             document.getElementById('input-id-produk').value = product.id;
             setRating(0); 
             document.getElementById('input-nama').value = '';
             document.getElementById('input-komentar').value = '';
             renderReviews(product.id);
 
-            // --- 4. LOGIKA BARU: RELATED PRODUCTS (PRODUK TERKAIT) ---
+            // 4. PRODUK TERKAIT (RELATED)
             const relatedContainer = document.getElementById('related-list');
-            relatedContainer.innerHTML = ''; // Bersihkan dulu
+            relatedContainer.innerHTML = ''; 
             
-            // Cari produk dengan Kategori SAMA, tapi BUKAN produk yang sedang dilihat
-            // Ambil maksimal 4 produk saja biar rapi
             const relatedProducts = allProductsData
                 .filter(p => p.kategori === product.kategori && p.id !== product.id)
                 .slice(0, 4); 
@@ -978,19 +967,13 @@
             if (relatedProducts.length > 0) {
                 let relatedHTML = '';
                 relatedProducts.forEach(rel => {
-                     // Ambil gambar pertama buat thumbnail
                      let thumbUrl = 'https://via.placeholder.com/150';
                      if(rel.gambar) {
                          const firstLink = rel.gambar.split(',')[0].trim();
                          let dId = "";
                          if (firstLink.includes("/d/")) dId = firstLink.split('/d/')[1].split('/')[0];
-                         if (dId) thumbUrl = `https://lh3.googleusercontent.com/d/${dId}`; // Pakai link lh3 + $ (otomatis di js string)
+                         if (dId) thumbUrl = `https://lh3.googleusercontent.com/d/${dId}`; 
                      }
-                     // Koreksi string literal di atas agar jalan (tambah $)
-                     thumbUrl = thumbUrl.replace('{dId}', '${dId}'); // Trik biar kebaca string literal di sini
-
-                     // Kita buat HTML card kecil
-                     // PENTING: Saat diklik, panggil openDetailModal lagi dengan ID baru
                      relatedHTML += `
                         <div class="related-card" onclick="openDetailModal('${rel.id}')">
                             <img src="${thumbUrl}" class="related-img" onerror="this.src='https://via.placeholder.com/150'">
@@ -1002,15 +985,65 @@
                      `;
                 });
                 relatedContainer.innerHTML = relatedHTML;
-                // Pastikan section-nya terlihat (kalau sebelumnya di-hide)
                 document.querySelector('.related-section').style.display = 'block';
             } else {
-                // Kalau gak ada produk sejenis, sembunyikan section ini
                 document.querySelector('.related-section').style.display = 'none';
             }
 
-            // Tampilkan Modal
             document.getElementById('detail-modal').classList.add('active');
+        }
+
+        // --- FUNGSI RENDERING GAMBAR DETAIL (BARU) ---
+        function renderDetailMedia() {
+            const container = document.getElementById('detail-media-container');
+            container.innerHTML = ''; // Bersihkan container
+
+            if (currentDetailImages.length === 0) {
+                container.innerHTML = `<img src="https://via.placeholder.com/400x500?text=No+Image" class="detail-img">`;
+                return;
+            }
+
+            // Ambil link gambar yang aktif sesuai index
+            const link = currentDetailImages[currentDetailIndex].trim();
+            let driveId = "";
+            if (link.includes("/d/")) driveId = link.split('/d/')[1].split('/')[0];
+
+            let mediaHTML = '';
+            
+            // Cek apakah Video atau Gambar
+            if(link.toLowerCase().includes('#video')) {
+                 const videoUrl = `https://drive.google.com/file/d/${driveId}/preview`;
+                 mediaHTML = `<iframe src="${videoUrl}" class="detail-video" allow="autoplay"></iframe>`;
+            } else {
+                 const imgUrl = driveId ? `https://lh3.googleusercontent.com/d/${driveId}` : 'https://via.placeholder.com/400x500';
+                 mediaHTML = `<img src="${imgUrl}" class="detail-img">`;
+            }
+
+            // Tambahkan Tombol Navigasi jika gambar lebih dari 1
+            if (currentDetailImages.length > 1) {
+                // Kita paksa opacity: 1 supaya tombolnya selalu kelihatan (terutama di HP)
+                mediaHTML += `
+                    <button class="slider-btn prev-btn" onclick="changeDetailSlide(-1)" style="opacity:1; left:15px; width:35px; height:35px; font-size:18px;">❮</button>
+                    <button class="slider-btn next-btn" onclick="changeDetailSlide(1)" style="opacity:1; right:15px; width:35px; height:35px; font-size:18px;">❯</button>
+                    <div style="position:absolute; bottom:10px; right:15px; background:rgba(0,0,0,0.5); color:white; padding:2px 8px; border-radius:10px; font-size:10px;">
+                        ${currentDetailIndex + 1} / ${currentDetailImages.length}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = mediaHTML;
+        }
+
+        // --- FUNGSI GANTI SLIDE DETAIL ---
+        function changeDetailSlide(direction) {
+            // Update index
+            currentDetailIndex += direction;
+            
+            // Loop (kalau habis kembali ke awal)
+            if (currentDetailIndex < 0) currentDetailIndex = currentDetailImages.length - 1;
+            if (currentDetailIndex >= currentDetailImages.length) currentDetailIndex = 0;
+            
+            renderDetailMedia(); // Render ulang gambar baru
         }
 
         function closeDetailModal() {
