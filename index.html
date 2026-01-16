@@ -74,34 +74,42 @@
             .menu-mobile-btn { display: none !important; } 
         }
 
-        /* Tampilan Menu saat di HP */
+        /* Tampilan Menu saat di HP (Makeover Elegan) */
         @media (max-width: 768px) {
             .nav-center {
                 position: absolute;
-                top: 70px; /* Sesuai tinggi header */
+                top: 70px; 
                 left: 0;
                 width: 100%;
-                background: white;
+                /* GANTI JADI HITAM TRANSPARAN (Gaya Kaca) */
+                background: rgba(0, 0, 0, 0.85); 
+                backdrop-filter: blur(5px); /* Efek Blur di belakang menu */
                 flex-direction: column;
                 align-items: center;
-                padding: 20px 0;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                padding: 10px 0;
                 /* Default Sembunyi */
                 display: none; 
+                border-top: 1px solid rgba(255,255,255,0.1);
             }
             
-            /* Class ini akan dipanggil lewat JS nanti */
             .nav-center.active {
                 display: flex;
                 animation: slideDown 0.3s ease forwards;
             }
 
             .nav-link {
-                color: black;
-                padding: 15px 0;
+                color: white; /* Tulisan jadi Putih biar kontras */
+                padding: 20px 0;
                 width: 100%;
                 text-align: center;
-                border-bottom: 1px solid #f0f0f0;
+                border-bottom: 1px solid rgba(255,255,255,0.1); /* Garis pemisah tipis */
+                font-weight: 400; /* Agak tipis biar elegan */
+            }
+            
+            /* Efek saat disentuh jari */
+            .nav-link:active {
+                background: rgba(255, 255, 255, 0.1);
+                color: var(--accent-color);
             }
         }
         
@@ -1594,10 +1602,21 @@
             nav.classList.toggle('active');
         }
         
-        // Tambahan: Kalau pilih kategori, menu otomatis nutup biar rapi
+        // Tambahan: Kalau pilih kategori -> Scroll ke Katalog & Tutup Menu
         const links = document.querySelectorAll('.nav-link');
         links.forEach(link => {
             link.addEventListener('click', () => {
+                
+                // 1. Scroll Otomatis ke Bagian Produk (Katalog)
+                const katalogSection = document.getElementById('katalog');
+                if(katalogSection) {
+                    // Beri sedikit jeda biar filternya jalan dulu
+                    setTimeout(() => {
+                        katalogSection.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                }
+
+                // 2. Kalau di HP, tutup menu-nya
                 if(window.innerWidth < 768) {
                     toggleMenu();
                 }
