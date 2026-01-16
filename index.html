@@ -68,7 +68,47 @@
         .header-icons { display: flex; align-items: center; gap: 20px; }
         .icon-btn { font-size: 18px; cursor: pointer; color: inherit; transition: 0.2s; }
         .icon-btn:hover { color: var(--accent-color); }
-        @media (min-width: 768px) { .nav-center { display: flex; } .menu-mobile-btn { display: none; } }
+        /* --- UPDATE: MENU MOBILE RESPONSIVE --- */
+        @media (min-width: 768px) { 
+            .nav-center { display: flex !important; } 
+            .menu-mobile-btn { display: none !important; } 
+        }
+
+        /* Tampilan Menu saat di HP */
+        @media (max-width: 768px) {
+            .nav-center {
+                position: absolute;
+                top: 70px; /* Sesuai tinggi header */
+                left: 0;
+                width: 100%;
+                background: white;
+                flex-direction: column;
+                align-items: center;
+                padding: 20px 0;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                /* Default Sembunyi */
+                display: none; 
+            }
+            
+            /* Class ini akan dipanggil lewat JS nanti */
+            .nav-center.active {
+                display: flex;
+                animation: slideDown 0.3s ease forwards;
+            }
+
+            .nav-link {
+                color: black;
+                padding: 15px 0;
+                width: 100%;
+                text-align: center;
+                border-bottom: 1px solid #f0f0f0;
+            }
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
         /* --- 3. HERO SECTION (DYNAMIC) --- */
         .hero-section {
@@ -715,7 +755,7 @@
                 <i class="fas fa-shopping-cart icon-btn"></i>
                 <div class="cart-badge" id="cart-count">0</div>
             </div>
-            <i class="fas fa-bars icon-btn menu-mobile-btn"></i>
+            <i class="fas fa-bars icon-btn menu-mobile-btn" onclick="toggleMenu()"></i>
         </div>
     </header>
 
@@ -1547,6 +1587,22 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         initWebsite();
+
+        // --- FUNGSI MENU MOBILE ---
+        function toggleMenu() {
+            const nav = document.querySelector('.nav-center');
+            nav.classList.toggle('active');
+        }
+        
+        // Tambahan: Kalau pilih kategori, menu otomatis nutup biar rapi
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            link.addEventListener('click', () => {
+                if(window.innerWidth < 768) {
+                    toggleMenu();
+                }
+            })
+        });
     </script>
 </body>
 </html>
