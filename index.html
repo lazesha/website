@@ -886,6 +886,9 @@
                 
                 // Simpan data
                 allProductsData = data.produk;
+                if(allProductsData && allProductsData.length > 0) {
+                    allProductsData.sort(() => 0.5 - Math.random());
+                }
                 heroData = data.hero;
                 allPesananData = data.pesanan || [];
                 allReviews = data.review || []; 
